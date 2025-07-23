@@ -1,15 +1,16 @@
 const express = require('express');
 const cors = require('cors');
+
 const app = express();
 
-// Libera o acesso da origem do frontend
+// ✅ Habilita CORS para o frontend local
 app.use(cors({
-  origin: 'https://back-web-o13t.onrender.com', // substitua pelo domínio real do seu frontend
-  credentials: true // se for usar cookies/sessão
+  origin: ['http://localhost:3000', 'http://localhost:3001'], // adicione aqui os domínios do front
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 app.use(express.json());
-
 
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
