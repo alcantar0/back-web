@@ -1,6 +1,15 @@
 const express = require('express');
+const cors = require('cors');
 const app = express();
+
+// Libera o acesso da origem do frontend
+app.use(cors({
+  origin: 'https://seufrontend.onrender.com', // substitua pelo domínio real do seu frontend
+  credentials: true // se for usar cookies/sessão
+}));
+
 app.use(express.json());
+
 
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
