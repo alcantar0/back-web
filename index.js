@@ -4,7 +4,7 @@ const app = express();
 
 // Libera o acesso da origem do frontend
 app.use(cors({
-  origin: 'https://seufrontend.onrender.com', // substitua pelo domínio real do seu frontend
+  origin: 'https://back-web-o13t.onrender.com', // substitua pelo domínio real do seu frontend
   credentials: true // se for usar cookies/sessão
 }));
 
