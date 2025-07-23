@@ -92,4 +92,68 @@ router.get('/questions/:id/answers', async (req, res) => {
   }
 });
 
+// Votar numa resposta (apenas upvote neste exemplo)
+router.post('/answers/:id/vote', authMiddleware, async (req, res) => {
+  const answerId = req.params.id;
+  const userId = req.userId;
+  const { vote } = req.body; // espera true para upvote, false para downvote (opcional)
+
+  if (typeof vote !== 'boolean') {
+    return res.status(400).json({ error: 'O campo vote deve ser true ou false' });
+  }
+
+  try {
+    // Verifica se resposta existe
+    const answer = await pool.query('SELECT * FROM respostas WHERE id = $1', [answerId]);
+    if (answer.rows.length === 0) {
+      return res.status(404).json({ error: 'Resposta não encontrada' });
+    }
+
+    // Tenta inserir o voto, ou atualizar se já existe
+    const existingVote = await pool.query(
+      'SELECT * FROM answer_votes WHERE answer_id = $1 AND user_id = $2',
+      [answerId, userId]
+    );
+
+    if (existingVote.rows.length > 0) {
+      // Atualiza o voto existente
+      await pool.query(
+        'UPDATE answer_votes SET vote = $1, created_at = NOW() WHERE answer_id = $2 AND user_id = $3',
+        [vote, answerId, userId]
+      );
+    } else {
+      // Insere voto novo
+      await pool.query(
+        'INSERT INTO answer_votes (answer_id, user_id, vote) VALUES ($1, $2, $3)',
+        [answerId, userId, vote]
+      );
+    }
+
+    res.json({ message: 'Voto registrado com sucesso' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+router.get('/questions/:id/answers', async (req, res) => {
+  const { id: questionId } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT 
+        a.*,
+        COALESCE(SUM(CASE WHEN av.vote THEN 1 ELSE -1 END), 0) AS votes
+      FROM answers a
+      LEFT JOIN answer_votes av ON av.answer_id = a.id
+      WHERE a.question_id = $1
+      GROUP BY a.id
+      ORDER BY votes DESC, a.created_at ASC
+    `, [questionId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
 module.exports = router;
