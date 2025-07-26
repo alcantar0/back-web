@@ -184,7 +184,7 @@ router.get('/questions/:id/answers', async (req, res) => {
 
 router.get('/answers/:id/vote-status', authMiddleware, async (req, res) => {
   const answerId = parseInt(req.params.id);
-  const userId = req.userId;
+  const userId = req.query.userId;
 
   try {
     const result = await pool.query(
