@@ -36,7 +36,6 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -51,7 +50,9 @@ router.post('/login', async (req, res) => {
     if (!valid) return res.status(401).json({ error: 'Senha incorreta' });
 
     const token = jwt.sign({ userId: user.id }, SECRET, { expiresIn: '1h' });
-    res.json({ token });
+
+    // Retornando token e nome do usuário
+    res.json({ token, name: user.name });
   } catch (err) {
     console.error('Erro no login:', err);
     res.status(500).json({ error: 'Erro interno' });
