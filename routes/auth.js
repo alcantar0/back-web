@@ -8,7 +8,7 @@ const SECRET = 'segredo_supersecreto';
 
 // Cadastro
 router.post('/register', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, nome_completo } = req.body;
 
   try {
     const userExists = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
@@ -24,8 +24,8 @@ router.post('/register', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 8);
     const result = await pool.query(
-      'INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id',
-      [email, hashedPassword]
+      'INSERT INTO users (email, password, name) VALUES ($1, $2) RETURNING id',
+      [email, hashedPassword, nome_completo]
     );
 
     const token = jwt.sign({ userId: result.rows[0].id }, SECRET, { expiresIn: '1h' });
