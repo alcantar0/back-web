@@ -92,40 +92,54 @@ router.get('/questions/:id/answers', async (req, res) => {
   }
 });
 
-// Votar numa resposta (apenas upvote neste exemplo)
 router.post('/answers/:id/vote', authMiddleware, async (req, res) => {
   const answerId = req.params.id;
   const userId = req.userId;
-  const { vote } = req.body; // espera true para upvote, false para downvote (opcional)
+  const { vote } = req.body; // deve ser 1 (upvote) ou -1 (downvote)
 
-  if (typeof vote !== 'boolean') {
-    return res.status(400).json({ error: 'O campo vote deve ser true ou false' });
+  if (![1, -1].includes(vote)) {
+    return res.status(400).json({ error: 'O campo vote deve ser 1 ou -1' });
   }
 
   try {
     // Verifica se resposta existe
-    const answer = await pool.query('SELECT * FROM respostas WHERE id = $1', [answerId]);
-    if (answer.rows.length === 0) {
+    const answerResult = await pool.query('SELECT * FROM respostas WHERE id = $1', [answerId]);
+    if (answerResult.rows.length === 0) {
       return res.status(404).json({ error: 'Resposta não encontrada' });
     }
 
-    // Tenta inserir o voto, ou atualizar se já existe
     const existingVote = await pool.query(
       'SELECT * FROM answer_votes WHERE answer_id = $1 AND user_id = $2',
       [answerId, userId]
     );
 
     if (existingVote.rows.length > 0) {
-      // Atualiza o voto existente
-      await pool.query(
-        'UPDATE answer_votes SET vote = $1, created_at = NOW() WHERE answer_id = $2 AND user_id = $3',
-        [vote, answerId, userId]
-      );
+      const previousVote = existingVote.rows[0].vote;
+
+      // Atualiza voto apenas se for diferente
+      if (previousVote !== vote) {
+        await pool.query(
+          'UPDATE answer_votes SET vote = $1, created_at = NOW() WHERE answer_id = $2 AND user_id = $3',
+          [vote, answerId, userId]
+        );
+
+        // Atualiza contagem total de votos
+        await pool.query(
+          'UPDATE respostas SET votes = votes + $1 WHERE id = $2',
+          [vote - previousVote, answerId]
+        );
+      }
     } else {
-      // Insere voto novo
+      // Insere novo voto
       await pool.query(
         'INSERT INTO answer_votes (answer_id, user_id, vote) VALUES ($1, $2, $3)',
         [answerId, userId, vote]
+      );
+
+      // Incrementa votos na resposta
+      await pool.query(
+        'UPDATE respostas SET votes = votes + $1 WHERE id = $2',
+        [vote, answerId]
       );
     }
 
@@ -135,6 +149,7 @@ router.post('/answers/:id/vote', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Erro interno' });
   }
 });
+
 
 router.get('/questions/:id/answers', async (req, res) => {
   const { id: questionId } = req.params;
