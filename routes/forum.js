@@ -182,4 +182,33 @@ router.get('/questions/:id/answers', async (req, res) => {
   }
 });
 
+router.get('/answers/:id/vote-status', authMiddleware, async (req, res) => {
+  const answerId = parseInt(req.params.id);
+  const userId = req.userId;
+
+  try {
+    const result = await pool.query(
+      'SELECT vote FROM answer_votes WHERE answer_id = $1 AND user_id = $2',
+      [answerId, userId]
+    );
+
+    if (result.rows.length > 0) {
+      // Já votou
+      return res.json({
+        voted: true,
+        vote: result.rows[0].vote // 1 ou -1
+      });
+    } else {
+      // Não votou ainda
+      return res.json({
+        voted: false,
+        vote: null
+      });
+    }
+  } catch (err) {
+    console.error('Erro ao verificar voto:', err);
+    res.status(500).json({ error: 'Erro interno no servidor' });
+  }
+});
+
 module.exports = router;
