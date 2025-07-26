@@ -95,44 +95,69 @@ router.get('/questions/:id/answers', async (req, res) => {
 router.post('/answers/:id/vote', authMiddleware, async (req, res) => {
   const answerId = parseInt(req.params.id);
   const userId = req.userId;
-  const { vote } = req.body; // 1 ou -1
+  const { vote } = req.body; // deve ser 1 ou -1
 
   if (![1, -1].includes(vote)) {
     return res.status(400).json({ error: 'O campo vote deve ser 1 ou -1' });
   }
 
   try {
-    // 1. Verifica se a resposta existe
     const answerResult = await pool.query('SELECT * FROM respostas WHERE id = $1', [answerId]);
     if (answerResult.rows.length === 0) {
       return res.status(404).json({ error: 'Resposta não encontrada' });
     }
 
-    // 2. Verifica se o usuário já votou
-    const existingVote = await pool.query(
+    const existingVoteResult = await pool.query(
       'SELECT * FROM answer_votes WHERE answer_id = $1 AND user_id = $2',
       [answerId, userId]
     );
 
-    if (existingVote.rows.length > 0) {
-      return res.status(400).json({ error: 'Você já votou nessa resposta.' });
+    if (existingVoteResult.rows.length > 0) {
+      const previousVote = existingVoteResult.rows[0].vote;
+
+      if (previousVote === vote) {
+        // 👈 Clicou de novo no mesmo voto ⇒ desfaz o voto
+        await pool.query(
+          'DELETE FROM answer_votes WHERE answer_id = $1 AND user_id = $2',
+          [answerId, userId]
+        );
+
+        await pool.query(
+          'UPDATE respostas SET votes = votes - $1 WHERE id = $2',
+          [vote, answerId]
+        );
+
+        return res.json({ message: 'Voto removido com sucesso' });
+      } else {
+        // 👈 Trocou o voto (ex: upvote → downvote)
+        await pool.query(
+          'UPDATE answer_votes SET vote = $1, created_at = NOW() WHERE answer_id = $2 AND user_id = $3',
+          [vote, answerId, userId]
+        );
+
+        await pool.query(
+          'UPDATE respostas SET votes = votes + $1 - $2 WHERE id = $3',
+          [vote, previousVote, answerId]
+        );
+
+        return res.json({ message: 'Voto atualizado com sucesso' });
+      }
+    } else {
+      // 👈 Primeira vez votando
+      await pool.query(
+        'INSERT INTO answer_votes (answer_id, user_id, vote, created_at) VALUES ($1, $2, $3, NOW())',
+        [answerId, userId, vote]
+      );
+
+      await pool.query(
+        'UPDATE respostas SET votes = votes + $1 WHERE id = $2',
+        [vote, answerId]
+      );
+
+      return res.json({ message: 'Voto registrado com sucesso' });
     }
-
-    // 3. Insere novo voto
-    await pool.query(
-      'INSERT INTO answer_votes (answer_id, user_id, vote, created_at) VALUES ($1, $2, $3, NOW())',
-      [answerId, userId, vote]
-    );
-
-    // 4. Atualiza contador de votos na resposta
-    await pool.query(
-      'UPDATE respostas SET votes = votes + $1 WHERE id = $2',
-      [vote, answerId]
-    );
-
-    res.json({ message: 'Voto registrado com sucesso' });
   } catch (err) {
-    console.error('Erro ao registrar voto:', err);
+    console.error('Erro ao votar:', err);
     res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
