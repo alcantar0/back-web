@@ -93,7 +93,7 @@ router.get('/questions/:id/answers', async (req, res) => {
 });
 
 router.post('/answers/:id/vote', authMiddleware, async (req, res) => {
-  const answerId = req.params.id;
+  const answerId = parseInt(req.params.id);
   const userId = req.userId;
   const { vote } = req.body; // deve ser 1 (upvote) ou -1 (downvote)
 
@@ -102,51 +102,28 @@ router.post('/answers/:id/vote', authMiddleware, async (req, res) => {
   }
 
   try {
-    // Verifica se resposta existe
+    // 1. Verifica se a resposta existe
     const answerResult = await pool.query('SELECT * FROM respostas WHERE id = $1', [answerId]);
     if (answerResult.rows.length === 0) {
       return res.status(404).json({ error: 'Resposta não encontrada' });
     }
 
-    const existingVote = await pool.query(
-      'SELECT * FROM answer_votes WHERE answer_id = $1 AND user_id = $2',
-      [answerId, userId]
+    // 2. Insere novo registro de voto (sem sobrescrever)
+    await pool.query(
+      'INSERT INTO answer_votes (answer_id, user_id, vote, created_at) VALUES ($1, $2, $3, NOW())',
+      [answerId, userId, vote]
     );
 
-    if (existingVote.rows.length > 0) {
-      const previousVote = existingVote.rows[0].vote;
-
-      // Atualiza voto apenas se for diferente
-      if (previousVote !== vote) {
-        await pool.query(
-          'UPDATE answer_votes SET vote = $1, created_at = NOW() WHERE answer_id = $2 AND user_id = $3',
-          [vote, answerId, userId]
-        );
-
-        // Atualiza contagem total de votos
-        await pool.query(
-          'UPDATE respostas SET votes = votes + $1 WHERE id = $2',
-          [vote - previousVote, answerId]
-        );
-      }
-    } else {
-      // Insere novo voto
-      await pool.query(
-        'INSERT INTO answer_votes (answer_id, user_id, vote) VALUES ($1, $2, $3)',
-        [answerId, userId, vote]
-      );
-
-      // Incrementa votos na resposta
-      await pool.query(
-        'UPDATE respostas SET votes = votes + $1 WHERE id = $2',
-        [vote, answerId]
-      );
-    }
+    // 3. Incrementa o campo 'votes' na resposta
+    await pool.query(
+      'UPDATE respostas SET votes = votes + $1 WHERE id = $2',
+      [vote, answerId]
+    );
 
     res.json({ message: 'Voto registrado com sucesso' });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro interno' });
+    console.error('Erro ao registrar voto:', err);
+    res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
 
