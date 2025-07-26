@@ -95,7 +95,7 @@ router.get('/questions/:id/answers', async (req, res) => {
 router.post('/answers/:id/vote', authMiddleware, async (req, res) => {
   const answerId = parseInt(req.params.id);
   const userId = req.userId;
-  const { vote } = req.body; // deve ser 1 (upvote) ou -1 (downvote)
+  const { vote } = req.body; // 1 ou -1
 
   if (![1, -1].includes(vote)) {
     return res.status(400).json({ error: 'O campo vote deve ser 1 ou -1' });
@@ -108,13 +108,23 @@ router.post('/answers/:id/vote', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Resposta não encontrada' });
     }
 
-    // 2. Insere novo registro de voto (sem sobrescrever)
+    // 2. Verifica se o usuário já votou
+    const existingVote = await pool.query(
+      'SELECT * FROM answer_votes WHERE answer_id = $1 AND user_id = $2',
+      [answerId, userId]
+    );
+
+    if (existingVote.rows.length > 0) {
+      return res.status(400).json({ error: 'Você já votou nessa resposta.' });
+    }
+
+    // 3. Insere novo voto
     await pool.query(
       'INSERT INTO answer_votes (answer_id, user_id, vote, created_at) VALUES ($1, $2, $3, NOW())',
       [answerId, userId, vote]
     );
 
-    // 3. Incrementa o campo 'votes' na resposta
+    // 4. Atualiza contador de votos na resposta
     await pool.query(
       'UPDATE respostas SET votes = votes + $1 WHERE id = $2',
       [vote, answerId]
@@ -126,7 +136,6 @@ router.post('/answers/:id/vote', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
-
 
 router.get('/questions/:id/answers', async (req, res) => {
   const { id: questionId } = req.params;
