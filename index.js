@@ -12,7 +12,9 @@ const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const forumRoutes = require('./routes/forum');
 const eventsRoutes = require('./routes/events');
-const fileRoutes = require('./routes/file'); // <-- nova rota de arquivos
+const fileRoutes = require('./routes/file');
+const materialRoutes = require('./routes/materials');
+
 
 // Servir arquivos da pasta uploads (ex: http://localhost:3001/uploads/nome-do-arquivo)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -22,7 +24,8 @@ app.use('/api', authRoutes);
 app.use('/api', profileRoutes);
 app.use('/api', forumRoutes);
 app.use('/api', eventsRoutes);
-app.use('/api', fileRoutes); // <-- aplica rota de upload sob /api
+app.use('/api', fileRoutes);
+app.use('/api', materialRoutes);
 
 // Porta
 const PORT = process.env.PORT || 3001;
