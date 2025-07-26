@@ -6,7 +6,6 @@ const pool = require('../db');
 
 const SECRET = 'segredo_supersecreto';
 
-// Cadastro
 router.post('/register', async (req, res) => {
   const { email, password, nome_completo } = req.body;
 
@@ -23,8 +22,9 @@ router.post('/register', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 8);
+
     const result = await pool.query(
-      'INSERT INTO users (email, password, name) VALUES ($1, $2) RETURNING id',
+      'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id',
       [email, hashedPassword, nome_completo]
     );
 
@@ -35,6 +35,7 @@ router.post('/register', async (req, res) => {
     res.status(500).json({ error: 'Erro interno' });
   }
 });
+
 
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
