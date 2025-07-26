@@ -53,7 +53,7 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign({ userId: user.id }, SECRET, { expiresIn: '1h' });
 
     // Retornando token e nome do usuário
-    res.json({ token, name: user.name });
+    res.json({ token, name: user.name, userId: user.id });
   } catch (err) {
     console.error('Erro no login:', err);
     res.status(500).json({ error: 'Erro interno' });
