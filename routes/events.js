@@ -3,7 +3,6 @@ const router = express.Router();
 const pool = require('../db');
 
 router.get('/events', async (req, res) => {
-    // Proximos eventos
     try {
         const result = await pool.query('SELECT * FROM eventos WHERE data_inicio >= NOW() ORDER BY data_inicio ASC');
         res.json(result.rows);
@@ -14,7 +13,6 @@ router.get('/events', async (req, res) => {
 });
 
 router.get('/past-events', async (req, res) => {
-    // Eventos passados
     try {
         const result = await pool.query('SELECT * FROM eventos WHERE data_inicio < NOW() ORDER BY data_inicio DESC');
         res.json(result.rows);
@@ -25,7 +23,6 @@ router.get('/past-events', async (req, res) => {
 });
 
 router.post('/events', async (req, res) => {
-    // Admin: Criar evento
     const { titulo, descricao, palestrante, data_inicio, duracao_minutos, localizacao, imagem_url } = req.body;
 
     if (!titulo || !descricao || !palestrante || !data_inicio || !duracao_minutos || !localizacao) {
@@ -45,7 +42,6 @@ router.post('/events', async (req, res) => {
 })
 
 router.patch('/events/:id', async (req, res) => {
-    // Admin: Editar evento
     const { id } = req.params;
     const updates = req.body;
 
@@ -54,7 +50,6 @@ router.patch('/events/:id', async (req, res) => {
     }
 
     try {
-        // Constrói a query dinamicamente baseada nos campos fornecidos
         const fields = Object.keys(updates);
         const values = Object.values(updates);
         const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');

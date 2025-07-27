@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../db'); // sua conexão PostgreSQL
+const pool = require('../db'); 
 
-// Listar todos os materiais
 router.get('/materials', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM materials ORDER BY created_at DESC');
@@ -12,7 +11,6 @@ router.get('/materials', async (req, res) => {
   }
 });
 
-// Adicionar novo material
 router.post('/materials', async (req, res) => {
   const { title, url } = req.body;
   if (!title || !url) return res.status(400).json({ error: 'Campos obrigatórios' });

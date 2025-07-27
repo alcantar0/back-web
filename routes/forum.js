@@ -95,7 +95,7 @@ router.get('/questions/:id/answers', async (req, res) => {
 router.post('/answers/:id/vote', authMiddleware, async (req, res) => {
   const answerId = parseInt(req.params.id);
   const userId = req.userId;
-  const { vote } = req.body; // deve ser 1 ou -1
+  const { vote } = req.body; 
 
   if (![1, -1].includes(vote)) {
     return res.status(400).json({ error: 'O campo vote deve ser 1 ou -1' });
@@ -116,7 +116,6 @@ router.post('/answers/:id/vote', authMiddleware, async (req, res) => {
       const previousVote = existingVoteResult.rows[0].vote;
 
       if (previousVote === vote) {
-        // 👈 Clicou de novo no mesmo voto ⇒ desfaz o voto
         await pool.query(
           'DELETE FROM answer_votes WHERE answer_id = $1 AND user_id = $2',
           [answerId, userId]
@@ -129,7 +128,6 @@ router.post('/answers/:id/vote', authMiddleware, async (req, res) => {
 
         return res.json({ message: 'Voto removido com sucesso' });
       } else {
-        // 👈 Trocou o voto (ex: upvote → downvote)
         await pool.query(
           'UPDATE answer_votes SET vote = $1, created_at = NOW() WHERE answer_id = $2 AND user_id = $3',
           [vote, answerId, userId]
@@ -143,7 +141,6 @@ router.post('/answers/:id/vote', authMiddleware, async (req, res) => {
         return res.json({ message: 'Voto atualizado com sucesso' });
       }
     } else {
-      // 👈 Primeira vez votando
       await pool.query(
         'INSERT INTO answer_votes (answer_id, user_id, vote, created_at) VALUES ($1, $2, $3, NOW())',
         [answerId, userId, vote]

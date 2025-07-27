@@ -5,10 +5,8 @@ const path = require('path');
 
 const router = express.Router();
 
-// Caminho absoluto para a pasta uploads
 const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
 
-// Configuração do multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, UPLOAD_DIR);
@@ -22,7 +20,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// 📤 POST /upload - Enviar um arquivo
 router.post('/upload', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Nenhum arquivo enviado' });
@@ -35,7 +32,6 @@ router.post('/upload', upload.single('file'), (req, res) => {
   });
 });
 
-// 📥 GET /files - Listar todos os arquivos
 router.get('/files', (req, res) => {
   fs.readdir(UPLOAD_DIR, (err, files) => {
     if (err) return res.status(500).json({ error: 'Erro ao listar arquivos' });
@@ -44,7 +40,6 @@ router.get('/files', (req, res) => {
   });
 });
 
-// 📄 GET /files/:filename - Baixar um arquivo específico
 router.get('/files/:filename', (req, res) => {
   const filePath = path.join(UPLOAD_DIR, req.params.filename);
 
@@ -55,7 +50,6 @@ router.get('/files/:filename', (req, res) => {
   res.sendFile(filePath);
 });
 
-// 🗑️ DELETE /files/:filename - Excluir um arquivo
 router.delete('/files/:filename', (req, res) => {
   const filePath = path.join(UPLOAD_DIR, req.params.filename);
 
